@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    background-color: #080710;
+  }
+  
+  body {
+    background-color: #080710 !important;
+    color: #f8fafc;
+  }
+  
+  ::selection {
+    @apply bg-neonRose/40 text-white;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass-panel {
+    @apply bg-slateNight/60 backdrop-blur-xl border border-indigo-500/20 shadow-glow;
+  }
+  
+  .glass-panel-hover {
+    @apply transition-all duration-300 hover:bg-slateNight/85 hover:border-indigo-500/40 hover:shadow-pulse;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neonCyan via-neonBlue to-neonMint;
+  }
+  
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neonGold to-neonRose;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media print {
+  header,
+  button,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    background: #080710;
+  }
+}

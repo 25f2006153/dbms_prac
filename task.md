@@ -1,0 +1,15 @@
+- `[x]` Phase 1: Core Design System & Landing/Topic Shell
+  - `[x]` Define premium design tokens in `tailwind.config.ts` (colors, animations, fonts).
+  - `[x]` Update global CSS for base styles and glassmorphism.
+  - `[x]` Create core layout wrapper (`app/layout.tsx`).
+  - `[x]` Build animated button component.
+  - `[x]` Build glowing card component.
+  - `[x]` Build landing page skeleton to showcase design.
+- `[x]` Phase 2: Interactive Table & SQL Execution Engine
+  - `[x]` Build `<AnimatedTable />` with framer-motion.
+  - `[x]` Implement SQL execution sequence logic (steps 1-7).
+- `[x]` Phase 3: Whiteboard Pro Max
+  - `[x]` Investigate/integrate infinite canvas (e.g., `tldraw` or `reactflow`).
+- `[x]` Phase 4: AI Assistant & Gamification
+  - `[x]` Set up gamification UI (XP, progress).
+  - `[x]` Integrate mock AI assistant interactions.
