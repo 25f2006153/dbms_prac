@@ -41,8 +41,8 @@ export default function HomePage() {
             <Sparkles className="w-4 h-4 mr-2 inline text-neonGold" /> Premium Animation-first DBMS Prep
           </Badge>
           <div className="space-y-6">
-            <h1 className="max-w-4xl font-display text-6xl md:text-7xl lg:text-8xl font-black leading-[1.1] text-slate-900 dark:text-white tracking-tight">
-              Master SQL through <span className="text-gradient">Visual Cinema.</span>
+            <h1 className="max-w-4xl font-display text-4xl md:text-5xl lg:text-6xl font-black leading-[1.1] text-slate-900 dark:text-white tracking-tight">
+              Kajal How are you! could you like to be friend of with me?
             </h1>
             <p className="max-w-2xl text-xl leading-relaxed text-slate-650 dark:text-slate-300 font-sans">
               Stop reading dry textbooks. Watch SQL execute live. Explore 37 DBMS topics through interactive animations, dynamic glowing tables, and an infinite practice whiteboard.
