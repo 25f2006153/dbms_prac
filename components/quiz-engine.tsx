@@ -55,9 +55,9 @@ export function QuizEngine({ topic }: { topic: LessonTopic }) {
           <Badge className="bg-slate-200 dark:bg-white/8 text-slate-800 dark:text-white border-slate-350 dark:border-white/10">Best score: {bestScore}/3</Badge>
         </div>
 
-        <div className="rounded-[24px] border border-cyan-500/15 dark:border-cyan-300/15 bg-cyan-500/5 dark:bg-cyan-300/8 p-4 text-sm leading-7 text-cyan-800 dark:text-cyan-50">
-          <p className="font-semibold text-cyan-950 dark:text-cyan-100">Animation cue</p>
-          <p className="mt-1">{activeQuestion.animation}</p>
+        <div className="rounded-[24px] border border-cyan-500/25 bg-slate-900 p-4 text-sm leading-7 text-cyan-200">
+          <p className="font-bold text-neonCyan">Animation cue</p>
+          <p className="mt-1 text-slate-350">{activeQuestion.animation}</p>
         </div>
 
         <div className="grid gap-3">
@@ -79,18 +79,18 @@ export function QuizEngine({ topic }: { topic: LessonTopic }) {
                 }
                 className={`rounded-[22px] border px-4 py-4 text-left transition ${
                   isCorrect
-                    ? "border-emerald-500/35 bg-emerald-500/10 dark:border-emerald-300/30 dark:bg-emerald-300/10 text-emerald-950 dark:text-white"
+                    ? "border-emerald-500/50 bg-emerald-950/45 text-white"
                     : isIncorrect
-                      ? "border-rose-500/35 bg-rose-500/10 dark:border-rose-300/30 dark:bg-rose-300/10 text-rose-950 dark:text-white"
+                      ? "border-rose-500/50 bg-rose-950/45 text-white"
                       : chosen
-                        ? "border-cyan-500/35 bg-cyan-500/10 dark:border-cyan-300/30 dark:bg-cyan-300/10 text-cyan-950 dark:text-white"
-                        : "border-slate-200 dark:border-white/8 bg-slate-50/50 dark:bg-white/4 hover:bg-slate-100/50 dark:hover:bg-white/8 text-slate-800 dark:text-slate-100"
+                        ? "border-cyan-500/55 bg-indigo-950/65 text-neonCyan font-semibold"
+                        : "border-indigo-500/25 bg-slateNight/95 hover:bg-slate-900/50 text-slate-100"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="text-sm leading-6 text-slate-800 dark:text-slate-100">{option}</span>
-                  {isCorrect ? <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-250" /> : null}
-                  {isIncorrect ? <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-250" /> : null}
+                  <span className="text-sm leading-6 text-slate-200">{option}</span>
+                  {isCorrect ? <CheckCircle2 className="h-5 w-5 text-emerald-450" /> : null}
+                  {isIncorrect ? <XCircle className="h-5 w-5 text-rose-450" /> : null}
                 </div>
               </button>
             );
