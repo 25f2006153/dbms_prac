@@ -27,6 +27,7 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
   const isPlayingAudio = useRef(false);
   const currentAudio = useRef<HTMLAudioElement | null>(null);
   const useFallbackSpeechRef = useRef(false);
+  const activeUtterances = useRef<Set<SpeechSynthesisUtterance>>(new Set());
 
   // Stop audio on unmount and initialize Audio element
   useEffect(() => {
@@ -43,6 +44,7 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      activeUtterances.current.clear();
     };
   }, []);
 
@@ -68,6 +70,7 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       });
     } else if (task.type === 'speech' && task.text) {
       const utterance = new SpeechSynthesisUtterance(task.text);
+      activeUtterances.current.add(utterance);
       
       let langCode = 'en-US';
       const taskLang = task.lang || 'English';
@@ -97,10 +100,12 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       }
 
       utterance.onend = () => {
+        activeUtterances.current.delete(utterance);
         playNextAudio();
       };
       utterance.onerror = (e) => {
         console.error("SpeechSynthesis error", e);
+        activeUtterances.current.delete(utterance);
         playNextAudio();
       };
       
@@ -183,6 +188,15 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       // Extract only the closed <speech> tags for pristine Hindi audio
       const speechMatches = [...completion.matchAll(/<speech>([\s\S]*?)<\/speech>/g)];
       fullTextForTTS = speechMatches.map(m => m[1]).join(" ");
+    } else {
+      // Remove code blocks
+      fullTextForTTS = fullTextForTTS.replace(/```[\s\S]*?```/g, "");
+      // Remove inline code
+      fullTextForTTS = fullTextForTTS.replace(/`[^`]+`/g, "");
+      // Remove markdown tables (lines starting with | or containing |)
+      fullTextForTTS = fullTextForTTS.split('\n')
+        .filter(line => !line.trim().startsWith('|') && !line.trim().includes('|'))
+        .join('\n');
     }
 
     // Split into complete sentences, including Hindi Purna Viram (।)
@@ -198,8 +212,17 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
         queueTextForSpeech(cleanText, language === 'Hinglish' ? 'Hindi' : language, voiceType);
         spokenTextLength.current = completeTextToSpeak.length;
       }
+    } else if (!isLoading && fullTextForTTS.length > spokenTextLength.current) {
+      // If we finished loading, read any remaining text that doesn't end with punctuation
+      const newText = fullTextForTTS.substring(spokenTextLength.current).trim();
+      const cleanText = newText.replace(/[*_#`]/g, "");
+      
+      if (cleanText) {
+        queueTextForSpeech(cleanText, language === 'Hinglish' ? 'Hindi' : language, voiceType);
+        spokenTextLength.current = fullTextForTTS.length;
+      }
     }
-  }, [completion, language, voiceType, isAudioEnabled]);
+  }, [completion, language, voiceType, isAudioEnabled, isLoading]);
 
   const handleStartTutor = () => {
     if (currentAudio.current) {
@@ -214,6 +237,7 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       const unlockUtterance = new SpeechSynthesisUtterance(" ");
       window.speechSynthesis.speak(unlockUtterance);
     }
+    activeUtterances.current.clear();
     audioQueue.current = [];
     isPlayingAudio.current = false;
     spokenTextLength.current = 0;
@@ -235,6 +259,7 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      activeUtterances.current.clear();
       audioQueue.current = [];
       isPlayingAudio.current = false;
     }
