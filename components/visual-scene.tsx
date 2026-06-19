@@ -26,11 +26,11 @@ export function VisualScene({
   // Map the active scene directly to the execution phase
   const activePhase = (() => {
     if (scene.kind === "hook") return "FROM";
-    if (["filter", "logic", "pattern", "membership"].includes(scene.kind)) return "WHERE";
+    if (["filter", "logic", "pattern", "membership", "constraint"].includes(scene.kind)) return "WHERE";
     if (scene.kind === "distinct") return "DISTINCT";
     if (scene.kind === "summary") return "RESULT";
     if (scene.kind === "pitfall") return "PITFALL";
-    return "SELECT"; // default for projection/cartesian/rename/sort/aggregate/etc.
+    return "SELECT"; // default for projection/cartesian/rename/sort/aggregate/join/view/routine/transaction/authorization/trigger
   })();
 
   // Dynamic Stepper Steps present in the query
@@ -48,10 +48,10 @@ export function VisualScene({
     return list;
   })();
 
-  // Cartesian scan loop
+  // Cartesian/Join scan loop
   const [cartesianIndex, setCartesianIndex] = useState({ a: 0, b: 0 });
   useEffect(() => {
-    if (activePhase !== "SELECT" || scene.kind !== "cartesian" || !secondary) return;
+    if (activePhase !== "SELECT" || (scene.kind !== "cartesian" && scene.kind !== "join") || !secondary) return;
     const interval = setInterval(() => {
       setCartesianIndex((prev) => {
         const nextB = (prev.b + 1) % secondary.rows.length;
@@ -61,6 +61,26 @@ export function VisualScene({
     }, 1200);
     return () => clearInterval(interval);
   }, [activePhase, scene.kind, primary, secondary]);
+
+  // Routine execution loop
+  const [routineStep, setRoutineStep] = useState(0);
+  useEffect(() => {
+    if (activePhase !== "SELECT" || scene.kind !== "routine") return;
+    const interval = setInterval(() => {
+      setRoutineStep((prev) => (prev + 1) % 4);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [activePhase, scene.kind]);
+
+  // Transaction loop
+  const [txStep, setTxStep] = useState(0);
+  useEffect(() => {
+    if (activePhase !== "SELECT" || scene.kind !== "transaction") return;
+    const interval = setInterval(() => {
+      setTxStep((prev) => (prev + 1) % 5); // 0,1,2,3(rollback),4(reset)
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [activePhase, scene.kind]);
 
   // Sort loop
   const [isSorted, setIsSorted] = useState(false);
@@ -217,19 +237,35 @@ export function VisualScene({
                 animate={{ opacity: 1 }}
                 className="space-y-4"
               >
-                <p className="text-xs font-mono text-neonGold uppercase tracking-widest text-center">Evaluating Row Filters (WHERE Clause)</p>
-                
-                <div className="w-full max-w-md mx-auto relative">
-                  {/* Laser Scan beam effect */}
-                  <div className="absolute inset-x-0 h-0.5 bg-neonGold/50 top-1/3 shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-scan pointer-events-none z-20" />
-                  
-                  <TableView 
-                    table={primary}
-                    highlightRows={getFilteredRowIndices()}
-                    highlightColumns={getWhereColumns()}
-                    className="border-neonGold/40 shadow-[0_0_30px_rgba(250,204,21,0.08)]"
-                  />
-                </div>
+                {scene.kind === "constraint" ? (
+                  <>
+                    <p className="text-xs font-mono text-rose-400 uppercase tracking-widest text-center">Enforcing Integrity Constraints</p>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 max-w-4xl mx-auto">
+                       <TableView table={primary} highlightRows={[filterScanIndex]} highlightColumns={[]} className="border-rose-500/20 shadow-lg" compact />
+                       <div className="flex flex-col items-center">
+                         <motion.div animate={{ rotate: filterScanIndex % 2 !== 0 ? [0, 15, -15, 0] : 0, scale: filterScanIndex % 2 !== 0 ? 1.2 : 1, borderColor: filterScanIndex % 2 !== 0 ? "rgba(244,63,94,1)" : "rgba(244,63,94,0.3)" }} transition={{ duration: 0.3 }} className="w-16 h-16 rounded-full border-4 flex items-center justify-center bg-rose-950/50 shadow-[0_0_20px_rgba(244,63,94,0.4)]"><span className="text-2xl">{filterScanIndex % 2 !== 0 ? "🛑" : "🛡️"}</span></motion.div>
+                         <span className="mt-2 text-[10px] font-mono font-bold text-rose-400">CHECK GATE</span>
+                       </div>
+                       <TableView table={topic.resultTable} highlightRows={[]} highlightColumns={[]} className="border-rose-500/50 opacity-60" compact />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-mono text-neonGold uppercase tracking-widest text-center">Evaluating Row Filters (WHERE Clause)</p>
+                    
+                    <div className="w-full max-w-md mx-auto relative">
+                      {/* Laser Scan beam effect */}
+                      <div className="absolute inset-x-0 h-0.5 bg-neonGold/50 top-1/3 shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-scan pointer-events-none z-20" />
+                      
+                      <TableView 
+                        table={primary}
+                        highlightRows={getFilteredRowIndices()}
+                        highlightColumns={getWhereColumns()}
+                        className="border-neonGold/40 shadow-[0_0_30px_rgba(250,204,21,0.08)]"
+                      />
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -241,7 +277,69 @@ export function VisualScene({
                 className="space-y-4"
               >
                 <p className="text-xs font-mono text-neonCyan uppercase tracking-widest text-center">Projecting Columns (SELECT projection)</p>
-                                {scene.kind === "cartesian" && secondary ? (
+                                {scene.kind === "join" && secondary ? (
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-w-4xl mx-auto relative">
+                    <TableView table={primary} highlightRows={[cartesianIndex.a]} highlightColumns={[]} className="text-xs z-10 border-sky-500/50 shadow-[0_0_20px_rgba(14,165,233,0.3)] transform transition-transform duration-500 scale-105" compact />
+                    <div className="h-[140px] relative overflow-hidden flex flex-col justify-center items-center px-4 w-full">
+                      <svg className="w-full h-full absolute inset-0 overflow-visible pointer-events-none z-0">
+                        <motion.path key={`join-${cartesianIndex.a}-${cartesianIndex.b}`} d={`M 0,${35 + cartesianIndex.a * 35} C 50,${35 + cartesianIndex.a * 35} 100,${35 + cartesianIndex.b * 35} 150,${35 + cartesianIndex.b * 35}`} stroke="url(#joinGradient)" strokeWidth="3" fill="none" strokeDasharray="6 4" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 0.5 }} />
+                        <defs><linearGradient id="joinGradient"><stop offset="0%" stopColor="#0ea5e9"/><stop offset="100%" stopColor="#d946ef"/></linearGradient></defs>
+                      </svg>
+                      <motion.div key={`badge-${cartesianIndex.a}-${cartesianIndex.b}`} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="z-10 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/40 px-3 py-1 text-[9px] font-mono text-fuchsia-300 font-bold backdrop-blur-md whitespace-nowrap">MATCHING...</motion.div>
+                    </div>
+                    <TableView table={secondary} highlightRows={[cartesianIndex.b]} highlightColumns={[]} className="text-xs z-10 border-fuchsia-500/50 shadow-[0_0_20px_rgba(217,70,239,0.3)] transform transition-transform duration-500 scale-105" compact />
+                  </div>
+                ) : scene.kind === "routine" ? (
+                  <div className="grid grid-cols-[1.2fr_0.8fr] gap-6 items-center max-w-4xl mx-auto">
+                    <div className="rounded-xl border border-blue-500/30 bg-blue-950/40 p-4 font-mono text-xs text-left relative overflow-hidden shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                      <div className="absolute left-0 w-1 bg-blue-500 transition-all duration-300 ease-out" style={{ top: `${routineStep * 28 + 16}px`, height: '20px' }} />
+                      <div className={`pl-4 py-1.5 transition-colors ${routineStep === 0 ? "text-blue-300 bg-blue-500/10" : "text-slate-400"}`}>DECLARE d_count INTEGER;</div>
+                      <div className={`pl-4 py-1.5 transition-colors ${routineStep === 1 ? "text-blue-300 bg-blue-500/10" : "text-slate-400"}`}>SELECT count(*) INTO d_count</div>
+                      <div className={`pl-4 py-1.5 transition-colors ${routineStep === 2 ? "text-blue-300 bg-blue-500/10" : "text-slate-400"}`}>FROM instructor WHERE dept = 'Physics';</div>
+                      <div className={`pl-4 py-1.5 transition-colors ${routineStep === 3 ? "text-blue-300 bg-blue-500/10" : "text-slate-400"}`}>RETURN d_count;</div>
+                    </div>
+                    <TableView table={topic.resultTable} highlightRows={routineStep === 3 ? [0] : []} highlightColumns={[]} className={`transition-all duration-500 ${routineStep === 3 ? 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.3)] scale-105' : 'opacity-50'}`} compact />
+                  </div>
+                ) : scene.kind === "transaction" ? (
+                  <div className="flex flex-col items-center gap-6 max-w-2xl mx-auto w-full">
+                    <div className="flex gap-4 w-full justify-center">
+                      {['BEGIN', 'UPDATE 1', 'UPDATE 2', 'COMMIT'].map((step, idx) => {
+                        const isActive = txStep >= idx && txStep !== 3;
+                        const isRollback = txStep === 3 && idx > 0;
+                        return (
+                          <motion.div key={step} animate={{ scale: isActive ? 1.1 : 1, opacity: isActive || isRollback ? 1 : 0.4, x: isRollback ? [-5, 5, -5, 5, 0] : 0 }} className={`px-4 py-2 rounded-lg border font-mono text-[10px] font-bold transition-colors duration-300 ${isRollback ? 'bg-red-500/20 border-red-500 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : isActive ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : 'bg-white/5 border-white/10 text-slate-500'}`}>
+                            {isRollback && idx === 3 ? 'ROLLBACK' : step}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                    <TableView table={txStep === 4 ? topic.resultTable : primary} highlightRows={txStep === 1 ? [0] : txStep === 2 ? [1] : []} highlightColumns={[]} className={`transition-all duration-500 w-full max-w-md ${txStep === 3 ? 'border-red-500/50' : txStep === 4 ? 'border-amber-500/50' : ''}`} compact />
+                  </div>
+                ) : scene.kind === "authorization" ? (
+                  <div className="flex items-center gap-8 justify-center max-w-2xl mx-auto w-full">
+                    <motion.div animate={{ x: [0, 20, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="flex flex-col items-center gap-2">
+                      <div className="w-14 h-14 rounded-full bg-yellow-500/20 border-2 border-yellow-500 flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.4)]"><span className="text-2xl">🔑</span></div>
+                      <span className="text-[10px] font-mono font-bold text-yellow-400">ROLE: GRANTED</span>
+                    </motion.div>
+                    <TableView table={topic.resultTable} highlightRows={[0]} highlightColumns={[]} className="border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]" compact />
+                  </div>
+                ) : scene.kind === "trigger" ? (
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 max-w-4xl mx-auto">
+                    <motion.div animate={{ x: [0, 40, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }} className="px-4 py-2 bg-indigo-500/20 border border-indigo-500/50 rounded shadow-[0_0_15px_rgba(99,102,241,0.4)] z-10"><span className="text-[10px] font-mono text-indigo-300 font-bold tracking-wider">UPDATE ROW</span></motion.div>
+                    <div className="h-32 w-[2px] bg-gradient-to-b from-transparent via-rose-500 to-transparent relative shadow-[0_0_10px_rgba(244,63,94,0.8)] flex items-center justify-center">
+                       <div className="absolute whitespace-nowrap bg-rose-950/80 px-2 py-1 rounded border border-rose-500 text-[9px] text-rose-300 font-mono z-20 shadow-xl font-bold">BEFORE TRIGGER FIRE</div>
+                    </div>
+                    <TableView table={topic.resultTable} highlightRows={[]} highlightColumns={[]} className="border-indigo-500/30 shadow-lg" compact />
+                  </div>
+                ) : scene.kind === "view" ? (
+                  <div className="relative max-w-md mx-auto flex flex-col items-center justify-center py-4 w-full">
+                    <TableView table={primary} highlightRows={[]} highlightColumns={[]} className="opacity-30 scale-95 blur-[2px] absolute z-0 pointer-events-none w-full" compact />
+                    <motion.div initial={{ backdropFilter: "blur(0px)", backgroundColor: "rgba(255,255,255,0)" }} animate={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(168,85,247,0.05)" }} transition={{ duration: 1 }} className="z-10 rounded-xl border border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.2)] p-2 w-full">
+                      <div className="absolute -top-3 -right-3 px-2 py-0.5 bg-purple-500/20 border border-purple-500 rounded text-[9px] font-mono text-purple-300 shadow-lg backdrop-blur-md">VIRTUAL VIEW LAYER</div>
+                      <TableView table={topic.resultTable} highlightRows={[]} highlightColumns={[]} className="bg-transparent border-none" compact />
+                    </motion.div>
+                  </div>
+                ) : scene.kind === "cartesian" && secondary ? (
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-w-4xl mx-auto">
                     <TableView 
                       table={primary} 

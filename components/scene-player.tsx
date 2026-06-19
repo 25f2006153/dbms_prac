@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, PauseCircle, PlayCircle } from "lucide-react";
 
 import { VisualScene } from "@/components/visual-scene";
+import { AITutor } from "@/components/ai-tutor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,13 +28,13 @@ export function ScenePlayer({ topic }: { topic: LessonTopic }) {
   }, [autoPlay, topic.scenes.length]);
 
   return (
-    <section className="space-y-5">
+    <section id="scene-player-container" className="space-y-5 scroll-mt-24">
       <div className="flex items-center justify-between gap-4">
         <div>
           <Badge>Animated scenes</Badge>
           <h2 className="mt-3 font-display text-3xl font-semibold text-slate-900 dark:text-white">6-scene concept journey</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -99,6 +100,18 @@ export function ScenePlayer({ topic }: { topic: LessonTopic }) {
         </Card>
 
         <VisualScene scene={activeScene} topic={topic} />
+      </div>
+
+      <div className="mt-8 space-y-4">
+        <h2 className="font-display text-2xl font-semibold text-slate-900 dark:text-white">AI Audio Tutor</h2>
+        <AITutor 
+          topic={topic} 
+          onStartLesson={() => {
+            // Removed scrolling to prevent the bug!
+            setAutoPlay(true);
+            setActiveIndex(0);
+          }} 
+        />
       </div>
     </section>
   );

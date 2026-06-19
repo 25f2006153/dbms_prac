@@ -13,7 +13,14 @@ export type TopicFamily =
   | "subquery"
   | "with-clause"
   | "select-subquery"
-  | "modification";
+  | "modification"
+  | "join"
+  | "view"
+  | "transaction"
+  | "constraint"
+  | "authorization"
+  | "routine"
+  | "trigger";
 
 export type VisualKind =
   | "projection"
@@ -31,6 +38,13 @@ export type VisualKind =
   | "with-clause"
   | "select-subquery"
   | "modification"
+  | "join"
+  | "view"
+  | "transaction"
+  | "constraint"
+  | "authorization"
+  | "routine"
+  | "trigger"
   | "hook"
   | "pitfall"
   | "summary";

@@ -6,7 +6,7 @@ type TopicBlueprint = {
   slug?: string;
   title: string;
   shortTitle: string;
-  moduleId: "module-11" | "module-12";
+  moduleId: "module-11" | "module-12" | "module-13" | "module-14" | "module-15";
   family: TopicFamily;
   conceptDescription: string;
   overview: string;
@@ -37,6 +37,24 @@ const moduleMeta = {
     number: 12,
     summary: "Step into layered SQL thinking with subqueries, temporary result sets, and data-changing statements.",
     accent: "from-emerald-400/30 via-teal-400/18 to-rose-500/22"
+  },
+  "module-13": {
+    title: "Module 13: Joins & Views",
+    number: 13,
+    summary: "Connect multiple tables with various joins and abstract queries into reusable views.",
+    accent: "from-violet-400/30 via-purple-400/18 to-fuchsia-500/22"
+  },
+  "module-14": {
+    title: "Module 14: Transactions & Constraints",
+    number: 14,
+    summary: "Ensure data integrity and handle atomic transactions with SQL constraints.",
+    accent: "from-amber-400/30 via-orange-400/18 to-red-500/22"
+  },
+  "module-15": {
+    title: "Module 15: Advanced SQL",
+    number: 15,
+    summary: "Extend SQL with procedural routines, custom functions, and automated triggers.",
+    accent: "from-indigo-400/30 via-blue-400/18 to-cyan-500/22"
   }
 } as const;
 
@@ -124,6 +142,31 @@ const feePlan = table(
   ]
 );
 
+const prereq = table(
+  "prereq",
+  "Prerequisite relationships for join examples.",
+  ["course_id", "prereq_id"],
+  [
+    ["DB101", "CS100"],
+    ["OS301", "CS100"],
+    ["AI210", "DB101"],
+    ["CS-315", "CS-101"]
+  ]
+);
+
+const instructor = table(
+  "instructor",
+  "Instructor table used for views and constraints.",
+  ["ID", "name", "dept_name", "salary"],
+  [
+    ["10101", "Srinivasan", "Comp. Sci.", "65000"],
+    ["12121", "Wu", "Finance", "90000"],
+    ["15151", "Mozart", "Music", "40000"],
+    ["22222", "Einstein", "Physics", "95000"],
+    ["32343", "El Said", "History", "60000"]
+  ]
+);
+
 const conceptBank = [
   "keeping only the requested columns from a relation",
   "removing duplicate values before the result table appears",
@@ -131,7 +174,14 @@ const conceptBank = [
   "merging or comparing sets from multiple query outputs",
   "reducing many rows into one summary value",
   "using the output of one query inside another query",
-  "changing the stored data inside a table"
+  "changing the stored data inside a table",
+  "connecting rows from multiple tables based on a matching condition",
+  "creating a virtual table that abstracts a complex query",
+  "bundling multiple operations into an all-or-nothing atomic action",
+  "enforcing rules on data to maintain database integrity",
+  "restricting access through privileges and roles",
+  "running procedural logic natively inside the database",
+  "automatically executing actions when specific data changes occur"
 ];
 
 function getVisualKind(family: TopicFamily): VisualKind {
@@ -166,6 +216,20 @@ function getVisualKind(family: TopicFamily): VisualKind {
       return "select-subquery";
     case "modification":
       return "modification";
+    case "join":
+      return "join";
+    case "view":
+      return "view";
+    case "transaction":
+      return "transaction";
+    case "constraint":
+      return "constraint";
+    case "authorization":
+      return "authorization";
+    case "routine":
+      return "routine";
+    case "trigger":
+      return "trigger";
     default:
       return "summary";
   }
@@ -1377,6 +1441,240 @@ const blueprints: TopicBlueprint[] = [
     examNotes: ["Scalar subqueries can provide new values inside UPDATE.", "The subquery must resolve compatibly for each target row."],
     interviewQuestions: ["What makes a scalar subquery safe inside an UPDATE?", "How would you debug an UPDATE that uses a subquery for its new value?"],
     finalSummary: "Scalar-subquery updates compute one new value per target row and write it back into storage."
+  },
+  {
+    id: 30,
+    slug: "inner-join",
+    title: "Inner Join",
+    shortTitle: "Equi-join & Natural",
+    moduleId: "module-13",
+    family: "join",
+    conceptDescription: "connecting rows from multiple tables based on a matching condition",
+    overview: "An INNER JOIN matches rows from two tables using a condition (usually equality). If specified as NATURAL, duplicate columns are removed automatically.",
+    learningGoal: "Visualize how matching pairs form the joined result, while non-matching rows are discarded.",
+    analogy: "Like matching students to courses only if they meet the exact prerequisite requirement.",
+    analogyVisual: "Lines connect matching student IDs to course IDs, forming new combined rows.",
+    sceneCue: "Only rows with matching keys merge; the rest fade away.",
+    quizCue: "Identify which rows will merge successfully and appear in the final table.",
+    query: "SELECT * FROM course INNER JOIN prereq ON course.course_id = prereq.course_id;",
+    tables: [courses, prereq],
+    resultTable: table("result_inner_join", "Inner join of course and prereq.", ["course_id", "title", "credits", "prereq_id"], [["DB101", "DBMS", "4", "CS100"], ["OS301", "Operating Sys", "3", "CS100"], ["AI210", "AI Basics", "4", "DB101"]]),
+    interactiveExample: "Toggle between an ON condition and a NATURAL JOIN to see how the duplicate course_id column is handled.",
+    commonMistakes: [
+      "Forgetting the ON clause, which turns the join into a Cartesian product.",
+      "Assuming rows without matches will appear in the result with NULLs."
+    ],
+    examNotes: ["Inner joins only keep rows that satisfy the join condition.", "Trick: NATURAL JOIN removes duplicate matching columns implicitly."],
+    interviewQuestions: ["What's the difference between an Equi-join and a Natural Join?", "Why would you choose explicit ON over NATURAL?"],
+    finalSummary: "Inner joins keep only the matched pairs. No match, no row."
+  },
+  {
+    id: 31,
+    slug: "left-outer-join",
+    title: "Left Outer Join",
+    shortTitle: "Left-side preserved",
+    moduleId: "module-13",
+    family: "join",
+    conceptDescription: "connecting rows from multiple tables based on a matching condition",
+    overview: "A LEFT OUTER JOIN returns all rows from the left table, and matching rows from the right table. Missing right-side values become NULL.",
+    learningGoal: "Understand how left outer joins prevent loss of information for the primary (left) table.",
+    analogy: "Like listing all courses in the catalog, and showing prerequisites where they exist.",
+    analogyVisual: "All left-side rows move forward. Those without right-side matches get 'NULL' placeholders.",
+    sceneCue: "Every course proceeds; missing prereqs are filled with NULLs.",
+    quizCue: "Count how many rows will have NULLs in the prereq column.",
+    query: "SELECT course.course_id, prereq.prereq_id FROM courses LEFT OUTER JOIN prereq ON courses.course_id = prereq.course_id;",
+    tables: [courses, prereq],
+    resultTable: table("result_left_join", "Left outer join keeping all courses.", ["course_id", "prereq_id"], [["DB101", "CS100"], ["SE201", "null"], ["OS301", "CS100"], ["AI210", "DB101"], ["UX110", "null"]]),
+    interactiveExample: "Swap the tables to see how 'LEFT' strictly means the first table named in the query.",
+    commonMistakes: [
+      "Placing a left-table condition in the WHERE clause instead of the ON clause, accidentally turning it into an inner join.",
+      "Confusing which table is preserved (it's the one before the JOIN keyword)."
+    ],
+    examNotes: ["Left Outer Join guarantees at least one row per left-table record.", "Trick: IS NULL checks in the WHERE clause are great for finding 'unmatched' left rows."],
+    interviewQuestions: ["How do you find rows in table A that have no match in table B?", "Why does moving an outer join's ON condition to the WHERE clause change the result?"],
+    finalSummary: "Left outer join: keep everything from the left, match what you can from the right."
+  },
+  {
+    id: 32,
+    slug: "full-outer-join",
+    title: "Full Outer Join",
+    shortTitle: "All sides preserved",
+    moduleId: "module-13",
+    family: "join",
+    conceptDescription: "connecting rows from multiple tables based on a matching condition",
+    overview: "A FULL OUTER JOIN combines the effects of left and right outer joins. All rows from both tables are kept, padded with NULLs where matches fail.",
+    learningGoal: "Visualize how the union of left-unmatched, right-unmatched, and matched rows creates the full picture.",
+    analogy: "Like merging two contact lists, keeping everyone even if they are missing a phone number or an email.",
+    analogyVisual: "Both tables slide together; unmatched rows on either side get NULL placeholders.",
+    sceneCue: "Both left and right rows survive; NULLs fill the gaps on both sides.",
+    quizCue: "Predict which columns will contain NULLs for the unmatched records.",
+    query: "SELECT * FROM courses FULL OUTER JOIN prereq USING (course_id);",
+    tables: [courses, prereq],
+    resultTable: table("result_full_join", "Full outer join of courses and prereqs.", ["course_id", "title", "credits", "prereq_id"], [["DB101", "DBMS", "4", "CS100"], ["SE201", "Software Eng", "3", "null"], ["OS301", "Operating Sys", "3", "CS100"], ["AI210", "AI Basics", "4", "DB101"], ["UX110", "UX Studio", "2", "null"], ["CS-315", "null", "null", "CS-101"]]),
+    interactiveExample: "Toggle between INNER and FULL outer join to see the 'orphan' rows appear with NULLs.",
+    commonMistakes: [
+      "Assuming FULL OUTER JOIN is the same as a Cartesian product. (It matches rows on a key!)",
+      "Using FULL OUTER JOIN when a LEFT JOIN is sufficient."
+    ],
+    examNotes: ["Full Outer Join = Left Join UNION Right Join.", "Trick: The USING clause merges the join keys into a single column automatically."],
+    interviewQuestions: ["When would a Full Outer Join be strictly necessary?", "What is the difference between FULL OUTER JOIN and CROSS JOIN?"],
+    finalSummary: "Full outer join leaves no row behind, filling the voids with NULLs."
+  },
+  {
+    id: 33,
+    slug: "sql-views",
+    title: "Views",
+    shortTitle: "Virtual tables",
+    moduleId: "module-13",
+    family: "view",
+    conceptDescription: "creating a virtual table that abstracts a complex query",
+    overview: "A VIEW is a virtual relation defined by a query. It hides complexity and restricts data access (e.g., hiding salaries). Materialized views physically store the result.",
+    learningGoal: "Understand view expansion and how virtual tables operate.",
+    analogy: "Like creating a filtered dashboard for a specific user so they only see what they need.",
+    analogyVisual: "A complex query wraps into a single 'View' object that acts just like a regular table.",
+    sceneCue: "The base tables are queried and the result is wrapped in a transparent 'View' layer.",
+    quizCue: "If a base table changes, what happens to the standard view?",
+    query: "CREATE VIEW faculty AS SELECT ID, name, dept_name FROM instructor;",
+    tables: [instructor],
+    resultTable: table("result_view", "The faculty view (salary hidden).", ["ID", "name", "dept_name"], [["10101", "Srinivasan", "Comp. Sci."], ["12121", "Wu", "Finance"], ["15151", "Mozart", "Music"], ["22222", "Einstein", "Physics"], ["32343", "El Said", "History"]]),
+    interactiveExample: "Update a row in the base 'instructor' table and watch the 'faculty' view instantly reflect the change.",
+    commonMistakes: [
+      "Thinking a standard view stores data physically on disk.",
+      "Trying to update a complex view (with aggregates or joins) and getting a database error."
+    ],
+    examNotes: ["View expansion happens at query runtime.", "Trick: Only simple views are updatable. Materialized views require maintenance/refresh."],
+    interviewQuestions: ["What makes a view 'updatable'?", "Why use a materialized view over a standard view?"],
+    finalSummary: "Views are saved queries that look and act like tables."
+  },
+  {
+    id: 34,
+    slug: "transactions",
+    title: "Transactions",
+    shortTitle: "Atomic unit of work",
+    moduleId: "module-14",
+    family: "transaction",
+    conceptDescription: "bundling multiple operations into an all-or-nothing atomic action",
+    overview: "Transactions ensure that a series of database operations either completely succeed (COMMIT) or completely fail (ROLLBACK), maintaining consistency.",
+    learningGoal: "Visualize the 'all-or-nothing' nature of transactions.",
+    analogy: "Like a bank transfer where money must leave one account AND enter another—if either fails, neither happens.",
+    analogyVisual: "Multiple steps turn green, but if one turns red, the entire sequence rewinds to the start.",
+    sceneCue: "Operations queue up in a transaction block. Upon an error, the block shatters and state reverts.",
+    quizCue: "What happens to the first successful step if the second step fails before a COMMIT?",
+    query: "BEGIN; UPDATE accounts SET balance = balance - 100 WHERE id = 1; UPDATE accounts SET balance = balance + 100 WHERE id = 2; COMMIT;",
+    tables: [table("accounts", "Bank accounts for transaction demo.", ["id", "balance"], [["1", "500"], ["2", "300"]])],
+    resultTable: table("result_transaction", "Accounts after successful commit.", ["id", "balance"], [["1", "400"], ["2", "400"]]),
+    interactiveExample: "Trigger an error on the second update and watch the ROLLBACK undo the first update.",
+    commonMistakes: [
+      "Forgetting to COMMIT a transaction, leaving rows locked and changes invisible to others.",
+      "Assuming auto-commit is off when testing scripts."
+    ],
+    examNotes: ["Transactions are Atomic, Consistent, Isolated, and Durable (ACID).", "Trick: Rollbacks only undo changes made within the uncommitted transaction window."],
+    interviewQuestions: ["What are the ACID properties?", "What happens if a database crashes halfway through a transaction?"],
+    finalSummary: "Transactions bundle operations: either everything happens, or nothing happens."
+  },
+  {
+    id: 35,
+    slug: "integrity-constraints",
+    title: "Integrity Constraints",
+    shortTitle: "Data rules",
+    moduleId: "module-14",
+    family: "constraint",
+    conceptDescription: "enforcing rules on data to maintain database integrity",
+    overview: "Constraints (NOT NULL, UNIQUE, CHECK, FOREIGN KEY) guard against accidental damage. Referential integrity with CASCADE ensures linked records stay synced.",
+    learningGoal: "See how constraints block invalid data and how CASCADE deletes child records automatically.",
+    analogy: "Like a bouncer at the database door checking IDs, and an eviction policy that removes a student's records if they leave.",
+    analogyVisual: "Invalid row inserts hit a red wall (CHECK violation). Parent deletion triggers a domino effect on children.",
+    sceneCue: "An invalid insert bounces off. A parent delete cascades down and removes child rows.",
+    quizCue: "Predict what happens to a prereq row if its parent course is deleted using ON DELETE CASCADE.",
+    query: "CREATE TABLE prereq (course_id char(5), prereq_id char(5), FOREIGN KEY (course_id) REFERENCES courses ON DELETE CASCADE);",
+    tables: [courses, prereq],
+    resultTable: table("result_cascade", "Prereq table after parent course DB101 is deleted.", ["course_id", "prereq_id"], [["OS301", "CS100"], ["CS-315", "CS-101"]]),
+    interactiveExample: "Delete a course and watch its associated prereq rows disappear automatically via CASCADE.",
+    commonMistakes: [
+      "Trying to delete a parent row when RESTRICT is active, causing an error.",
+      "Overusing CASCADE and accidentally deleting vast amounts of connected data."
+    ],
+    examNotes: ["Primary keys imply UNIQUE and NOT NULL.", "Trick: CHECK constraints can enforce specific domain values (e.g., semester IN ('Fall', 'Spring'))."],
+    interviewQuestions: ["What is referential integrity?", "What is the difference between ON DELETE CASCADE and ON DELETE SET NULL?"],
+    finalSummary: "Constraints are the database's immune system. They block bad data and sync deletions."
+  },
+  {
+    id: 36,
+    slug: "authorization",
+    title: "Authorization & Roles",
+    shortTitle: "Access control",
+    moduleId: "module-14",
+    family: "authorization",
+    conceptDescription: "restricting access through privileges and roles",
+    overview: "GRANT and REVOKE control who can SELECT, INSERT, UPDATE, or DELETE. Roles bundle privileges so they can be assigned easily to multiple users.",
+    learningGoal: "Understand how privileges cascade and how roles simplify security.",
+    analogy: "Like giving an employee a 'Manager' badge that grants access to multiple restricted rooms at once.",
+    analogyVisual: "A golden key (role) is assigned to a user, unlocking specific tables but leaving others locked.",
+    sceneCue: "The GRANT statement passes a key to a user. The REVOKE statement snatches it back.",
+    quizCue: "If a user has a role revoked, what happens to their table access?",
+    query: "CREATE ROLE instructor; GRANT SELECT ON courses TO instructor; GRANT instructor TO 'Amit';",
+    tables: [courses],
+    resultTable: table("result_auth", "User Amit queries the courses table successfully.", ["status"], [["Access Granted"]]),
+    interactiveExample: "Toggle the 'instructor' role off for Amit and watch their query hit a red 'Access Denied' wall.",
+    commonMistakes: [
+      "Granting privileges on a view but forgetting the user needs no direct access to base tables (this is actually a feature, not a mistake, but often misunderstood!).",
+      "Using REVOKE without understanding the CASCADE effect on users who were granted access by this user."
+    ],
+    examNotes: ["Roles can be granted to other roles, creating a hierarchy.", "Trick: Revoking a privilege with CASCADE removes it from all users who received it down the chain."],
+    interviewQuestions: ["Why use Roles instead of granting privileges directly to users?", "How does view authorization hide underlying schema details?"],
+    finalSummary: "Authorization ensures users only see and touch what they are allowed to."
+  },
+  {
+    id: 37,
+    slug: "functions-procedures",
+    title: "Functions & Procedures",
+    shortTitle: "Stored routines",
+    moduleId: "module-15",
+    family: "routine",
+    conceptDescription: "running procedural logic natively inside the database",
+    overview: "Functions and procedures let you write imperative code (IF/THEN, WHILE loops) directly in the database. Functions return values; procedures perform actions.",
+    learningGoal: "Visualize how standard SQL expands into fully programmable logic.",
+    analogy: "Like giving the database a specific recipe to follow, rather than just asking for an ingredient.",
+    analogyVisual: "A block of code executes line-by-line, updating a variable counter and returning a result.",
+    sceneCue: "The procedure executes step-by-step: loop, check condition, increment counter.",
+    quizCue: "What happens when the WHILE loop condition turns false?",
+    query: "CREATE FUNCTION dept_count(d_name VARCHAR) RETURNS integer BEGIN ... RETURN d_count; END;",
+    tables: [instructor],
+    resultTable: table("result_function", "Result of calling dept_count('Physics').", ["d_count"], [["1"]]),
+    interactiveExample: "Step through the execution of a simple IF/THEN block to see the control flow.",
+    commonMistakes: [
+      "Using a stored procedure when a single declarative SQL query would be faster.",
+      "Forgetting that external language routines (Java, C) carry security and memory overhead risks."
+    ],
+    examNotes: ["Functions must return a value; procedures use OUT parameters.", "Trick: Table-valued functions return relations and can be used in the FROM clause."],
+    interviewQuestions: ["When would you write an external language routine instead of pure SQL?", "What is the difference between a function and a procedure?"],
+    finalSummary: "Routines give SQL the power of loops, variables, and logic branches."
+  },
+  {
+    id: 38,
+    slug: "triggers",
+    title: "Triggers",
+    shortTitle: "Automated actions",
+    moduleId: "module-15",
+    family: "trigger",
+    conceptDescription: "automatically executing actions when specific data changes occur",
+    overview: "Triggers run automatically BEFORE or AFTER an INSERT, UPDATE, or DELETE. They enforce complex integrity, audit changes, or transform data.",
+    learningGoal: "Understand the event-driven nature of triggers and the difference between BEFORE and AFTER.",
+    analogy: "Like a motion-sensor light that turns on exactly when someone walks through a door.",
+    analogyVisual: "An INSERT event trips a wire, waking up the Trigger block which instantly logs the event.",
+    sceneCue: "A row attempts to insert. The BEFORE trigger intercepts it, modifies a value, and lets it pass.",
+    quizCue: "Can an AFTER trigger modify the row that was just inserted?",
+    query: "CREATE TRIGGER check_salary BEFORE UPDATE ON instructor FOR EACH ROW ...",
+    tables: [instructor],
+    resultTable: table("result_trigger", "Instructor table after trigger intercepts an invalid salary update.", ["ID", "name", "salary"], [["10101", "Srinivasan", "65000"], ["12121", "Wu", "90000"]]),
+    interactiveExample: "Try to insert a negative salary and watch the BEFORE trigger reject it instantly.",
+    commonMistakes: [
+      "Creating recursive triggers that accidentally fire themselves in an infinite loop.",
+      "Using triggers to enforce simple rules that a CHECK constraint could handle much faster."
+    ],
+    examNotes: ["BEFORE triggers can modify data before it hits the table. AFTER triggers cannot.", "Trick: Be careful of performance overhead when triggers execute FOR EACH ROW on massive updates."],
+    interviewQuestions: ["Why might you choose an AFTER trigger over a BEFORE trigger?", "What are the performance risks of heavily relying on triggers?"],
+    finalSummary: "Triggers are database tripwires that run custom code automatically."
   }
 ];
 
