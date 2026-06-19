@@ -161,7 +161,7 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
     }
   };
 
-  const { completion, complete, isLoading } = useCompletion({
+  const { completion, complete, isLoading, error } = useCompletion({
     api: "/api/tutor",
     streamProtocol: "text",
     body: {
@@ -210,6 +210,9 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
     }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
+      // Speak a silent space synchronously to unlock SpeechSynthesis on browser autoplay policy
+      const unlockUtterance = new SpeechSynthesisUtterance(" ");
+      window.speechSynthesis.speak(unlockUtterance);
     }
     audioQueue.current = [];
     isPlayingAudio.current = false;
@@ -334,6 +337,13 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
 
       {/* Content Area */}
       <div className="flex-1 p-6 overflow-y-auto relative z-10 prose prose-invert prose-p:leading-relaxed prose-pre:bg-slate-950/80 prose-pre:border prose-pre:border-white/10 prose-headings:text-purple-300 max-w-none">
+        {error && (
+          <div className="mb-6 p-4 bg-red-950/40 border border-red-500/30 rounded-xl text-red-200 text-sm shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+            <p className="font-semibold text-red-400 mb-1">Lesson Generation Failed</p>
+            <p className="opacity-90">Please verify that you have added the <code className="bg-red-950/80 px-1 py-0.5 rounded text-red-300 font-mono">GEMINI_API_KEY</code> environment variable in your deployment platform settings (e.g. Vercel dashboard) and redeployed the application.</p>
+          </div>
+        )}
+
         {!completion && !isLoading ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-70">
             <Bot className="w-16 h-16 text-slate-600" />
