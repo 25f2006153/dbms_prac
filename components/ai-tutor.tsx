@@ -14,19 +14,34 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
+  interface AudioTask {
+    type: 'url' | 'speech';
+    src?: string;
+    text?: string;
+    lang?: string;
+    gender?: string;
+  }
+
   const spokenTextLength = useRef(0);
-  const audioQueue = useRef<string[]>([]);
+  const audioQueue = useRef<AudioTask[]>([]);
   const isPlayingAudio = useRef(false);
   const currentAudio = useRef<HTMLAudioElement | null>(null);
+  const useFallbackSpeechRef = useRef(false);
 
   // Stop audio on unmount and initialize Audio element
   useEffect(() => {
     if (typeof window !== 'undefined') {
       currentAudio.current = new Audio();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+      }
     }
     return () => {
       if (currentAudio.current) {
         currentAudio.current.pause();
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
@@ -37,15 +52,62 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       return;
     }
     isPlayingAudio.current = true;
-    const audioSrc = audioQueue.current.shift();
-    if (!audioSrc || !currentAudio.current) return;
+    const task = audioQueue.current.shift();
+    if (!task) return;
     
-    currentAudio.current.src = audioSrc;
-    currentAudio.current.onended = playNextAudio;
-    currentAudio.current.play().catch(e => {
-      console.error("Audio play error", e);
+    if (task.type === 'url' && task.src) {
+      if (!currentAudio.current) {
+        playNextAudio();
+        return;
+      }
+      currentAudio.current.src = task.src;
+      currentAudio.current.onended = playNextAudio;
+      currentAudio.current.play().catch(e => {
+        console.error("Audio play error", e);
+        playNextAudio();
+      });
+    } else if (task.type === 'speech' && task.text) {
+      const utterance = new SpeechSynthesisUtterance(task.text);
+      
+      let langCode = 'en-US';
+      const taskLang = task.lang || 'English';
+      if (taskLang === 'Hindi' || taskLang === 'Hinglish') langCode = 'hi-IN';
+      else if (taskLang === 'Bengali') langCode = 'bn-IN';
+      else if (taskLang === 'Spanish') langCode = 'es-ES';
+      else if (taskLang === 'French') langCode = 'fr-FR';
+      utterance.lang = langCode;
+
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        const voices = window.speechSynthesis.getVoices();
+        const matchingVoices = voices.filter(v => 
+          v.lang.toLowerCase().replace('_', '-').startsWith(langCode.substring(0, 2).toLowerCase())
+        );
+        if (matchingVoices.length > 0) {
+          const targetGender = task.gender || 'Female';
+          const selectedVoice = matchingVoices.find(v => {
+            const name = v.name.toLowerCase();
+            if (targetGender === 'Male') {
+              return name.includes('male') || name.includes('david') || name.includes('google') || name.includes('microsoft') || name.includes('ravi');
+            } else {
+              return name.includes('female') || name.includes('zira') || name.includes('google') || name.includes('microsoft') || name.includes('swara') || name.includes('sangeeta');
+            }
+          }) || matchingVoices[0];
+          utterance.voice = selectedVoice;
+        }
+      }
+
+      utterance.onend = () => {
+        playNextAudio();
+      };
+      utterance.onerror = (e) => {
+        console.error("SpeechSynthesis error", e);
+        playNextAudio();
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
       playNextAudio();
-    });
+    }
   };
 
   const getVoiceId = (lang: string, gender: string) => {
@@ -59,6 +121,15 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
 
   const queueTextForSpeech = async (text: string, lang: string, gender: string) => {
     if (!isAudioEnabled) return;
+
+    if (useFallbackSpeechRef.current) {
+      audioQueue.current.push({ type: 'speech', text, lang, gender });
+      if (!isPlayingAudio.current) {
+        playNextAudio();
+      }
+      return;
+    }
+
     try {
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -68,13 +139,25 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       if (response.ok) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        audioQueue.current.push(url);
+        audioQueue.current.push({ type: 'url', src: url });
+        if (!isPlayingAudio.current) {
+          playNextAudio();
+        }
+      } else {
+        console.warn("ElevenLabs TTS failed or quota exceeded. Falling back to browser Web Speech API.");
+        useFallbackSpeechRef.current = true;
+        audioQueue.current.push({ type: 'speech', text, lang, gender });
         if (!isPlayingAudio.current) {
           playNextAudio();
         }
       }
     } catch (err) {
-      console.error("Failed to fetch TTS", err);
+      console.error("Failed to fetch TTS, falling back to Web Speech API", err);
+      useFallbackSpeechRef.current = true;
+      audioQueue.current.push({ type: 'speech', text, lang, gender });
+      if (!isPlayingAudio.current) {
+        playNextAudio();
+      }
     }
   };
 
@@ -125,6 +208,9 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
       currentAudio.current.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
       currentAudio.current.play().catch(() => {});
     }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     audioQueue.current = [];
     isPlayingAudio.current = false;
     spokenTextLength.current = 0;
@@ -139,8 +225,13 @@ export function AITutor({ topic, onStartLesson }: { topic: LessonTopic, onStartL
 
   const toggleAudio = () => {
     setIsAudioEnabled(!isAudioEnabled);
-    if (isAudioEnabled && currentAudio.current) {
-      currentAudio.current.pause();
+    if (isAudioEnabled) {
+      if (currentAudio.current) {
+        currentAudio.current.pause();
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       audioQueue.current = [];
       isPlayingAudio.current = false;
     }
